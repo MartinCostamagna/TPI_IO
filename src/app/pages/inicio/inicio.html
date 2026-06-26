@@ -1,0 +1,67 @@
+<h2>InduTech S.A</h2>
+
+<div class="panel-acciones">
+    <button type="button" (click)="agregarFabrica()">+ Agregar Fábrica</button>
+    <button type="button" (click)="agregarTienda()">+ Agregar Tienda</button>
+</div>
+
+<div class="divTabla" [formGroup]="matrizForm">
+    <table>
+        <thead>
+            <tr>
+                <th>Origen \ Destino</th>
+                <ng-container formArrayName="tiendas">
+                    @for (tienda of tiendasFormArray.controls; track $index; let i = $index) {
+                    <th>
+                        <input type="text" [formControlName]="i" class="input-header">
+                    </th>
+                    }
+                </ng-container>
+                <th>Oferta Mensual</th>
+            </tr>
+        </thead>
+
+        <tbody formArrayName="fabricas">
+            @for (fabrica of fabricasFormArray.controls; track $index; let i = $index) {
+            <tr [formGroupName]="i">
+                <td class="col-nombre">
+                    <input type="text" formControlName="nombre" class="input-table-text">
+                </td>
+
+                <ng-container formArrayName="costos">
+                    @for (costo of getCostosControls(fabrica); track $index; let j = $index) {
+                    <td>
+                        <input type="number" [formControlName]="j" placeholder="$">
+                    </td>
+                    }
+                </ng-container>
+
+                <td>
+                    <input type="number" formControlName="oferta" class="input-total">
+                </td>
+            </tr>
+            }
+        </tbody>
+
+        @if (demandasFormArray.length > 0) {
+        <tfoot formArrayName="demandas">
+            <tr class="fila-demanda">
+                <td><strong>Demanda Mensual</strong></td>
+                @for (demanda of demandasFormArray.controls; track $index; let k = $index) {
+                <td>
+                    <input type="number" [formControlName]="k">
+                </td>
+                }
+                <td class="celda-vacia">-</td>
+            </tr>
+        </tfoot>
+        }
+    </table>
+
+    @if (fabricasFormArray.length > 0 && tiendasFormArray.length > 0) {
+    <div class="panel-inferior">
+        <button type="button" class="btn-reiniciar" (click)="reiniciarTabla()">Reiniciar Tabla</button>
+        <button type="button" class="btn-grafo" (click)="irAGenerarGrafo()">Generar Grafo y Optimizar →</button>
+    </div>
+    }
+</div>
