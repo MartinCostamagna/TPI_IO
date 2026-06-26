@@ -1,1 +1,24 @@
-<p>grafo works!</p>
+<div class="contenedor-grafo">
+    <h2>Optimización del Sistema de Gestión Logística</h2>
+
+    <div class="tarjeta-kpi">
+        <div class="kpi-item">
+            <span class="kpi-titulo">Costo Total de Distribución (Z)</span>
+            <span class="kpi-valor">$ {{ costoTotal | number:'1.0-2' }}</span>
+        </div>
+        <div class="kpi-item">
+            <span class="kpi-titulo">Estado del Modelo</span>
+            <span class="kpi-badge" [class.factible]="esFactible">
+                {{ esFactible ? 'ÓPTIMO ENCONTRADO' : 'NO FACTIBLE / EN REVISIÓN' }}
+            </span>
+        </div>
+    </div>
+
+    <div class="contenedor-red">
+        <div #networkContainer class="lienzo-grafo"></div>
+    </div>
+
+    <div class="panel-inferior">
+        <button type="button" class="btn-volver" (click)="volver()">← Modificar Parámetros</button>
+    </div>
+</div>

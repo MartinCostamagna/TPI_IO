@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators, AbstractControl } from '@angular/forms';
+import { TransporteService } from '../../services/transporte.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -14,7 +15,8 @@ export class Inicio implements OnInit {
   constructor(
     private fb: FormBuilder,
     private cdr: ChangeDetectorRef,
-    private router: Router
+    private router: Router,
+    private transporteService: TransporteService
   ) { }
 
   ngOnInit(): void {
@@ -77,6 +79,16 @@ export class Inicio implements OnInit {
   }
 
   irAGenerarGrafo() {
+    // 1. Verificamos que el formulario sea válido (que no haya campos vacíos)
+    if (this.matrizForm.invalid) {
+      alert('Por favor, completa todos los campos de costos, ofertas y demandas antes de continuar.');
+      return;
+    }
+
+    // 2. Enviamos el JSON con los datos al servicio compartido
+    this.transporteService.guardarMatriz(this.matrizForm.value);
+
+    // 3. Ahora sí, viajamos a la página del grafo
     this.router.navigate(['/grafo']);
   }
 }
