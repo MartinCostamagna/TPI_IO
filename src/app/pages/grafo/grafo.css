@@ -101,3 +101,98 @@ h2 {
     border-color: #A0AEC0;
     transform: translateY(-1px);
 }
+
+/* --- SECCIÓN DE ANÁLISIS DE SENSIBILIDAD --- */
+.contenedor-sensibilidad {
+    background: #FFFFFF;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    padding: 24px;
+    margin-bottom: 25px;
+}
+
+.contenedor-sensibilidad h3 {
+    color: #1A365D;
+    font-size: 20px;
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+
+.subtitulo-seccion {
+    color: #718096;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.grilla-sensibilidad {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.tarjeta-sensibilidad {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 18px;
+}
+
+.tarjeta-sensibilidad h4 {
+    color: #2B6CB0;
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 15px;
+}
+
+/* Tabla interna de sensibilidad */
+.tabla-sensibilidad {
+    width: 100%;
+    border-collapse: collapse;
+    background: #FFFFFF;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.tabla-sensibilidad th,
+.tabla-sensibilidad td {
+    padding: 10px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid #E2E8F0;
+    text-align: left;
+}
+
+.tabla-sensibilidad th {
+    background-color: #EDF2F7;
+    color: #4A5568;
+    font-weight: 700;
+}
+
+.texto-alerta {
+    color: #DD6B20;
+    font-weight: 700;
+}
+
+.texto-ok {
+    color: #38A169;
+    font-weight: 700;
+}
+
+.conclusion-analisis {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #4A5568;
+    background-color: #EBF8FF;
+    border-left: 4px solid #3182CE;
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    margin: 8px 0 0 0;
+}
+
+.bloque-conclusiones {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+}

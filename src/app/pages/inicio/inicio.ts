@@ -91,4 +91,29 @@ export class Inicio implements OnInit {
     // 3. Ahora sí, viajamos a la página del grafo
     this.router.navigate(['/grafo']);
   }
+
+  eliminarFabrica() {
+    if (this.fabricasFormArray.length > 0) {
+      this.fabricasFormArray.removeAt(this.fabricasFormArray.length - 1);
+
+      this.matrizForm.updateValueAndValidity();
+      this.cdr.detectChanges();
+    }
+  }
+
+  eliminarTienda() {
+    if (this.tiendasFormArray.length > 0) {
+      const indiceUltimo = this.tiendasFormArray.length - 1;
+      this.tiendasFormArray.removeAt(indiceUltimo);
+      this.fabricasFormArray.controls.forEach((fabrica) => {
+        const costos = fabrica.get('costos') as FormArray;
+        if (costos && costos.length > 0) {
+          costos.removeAt(indiceUltimo);
+        }
+      });
+      this.demandasFormArray.removeAt(indiceUltimo);
+      this.matrizForm.updateValueAndValidity();
+      this.cdr.detectChanges();
+    }
+  }
 }

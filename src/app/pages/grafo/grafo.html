@@ -18,6 +18,86 @@
         <div #networkContainer class="lienzo-grafo"></div>
     </div>
 
+    @if (analisisFabricas.length > 0) {
+    <div class="contenedor-sensibilidad">
+        <h3>📊 Análisis de Sensibilidad Logística</h3>
+        <p class="subtitulo-seccion">Interpretación de límites operativos y costos marginales calculados para este
+            escenario.</p>
+
+        <div class="grilla-sensibilidad">
+
+            <div class="tarjeta-sensibilidad">
+                <h4>💡 Costos Marginales de Capacidad (Precios Sombra)</h4>
+                <div class="tabla-responsiva">
+                    <table class="tabla-sensibilidad">
+                        <thead>
+                            <tr>
+                                <th>Recurso (Origen)</th>
+                                <th>Capacidad Actual</th>
+                                <th>Precio Sombra</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (fab of analisisFabricas; track fab.nombre) {
+                            <tr>
+                                <td><strong>{{ fab.nombre }}</strong></td>
+                                <td>{{ fab.capacidad }}</td>
+                                <td class="{{ fab.estilo }}">{{ fab.precioSombra }}</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bloque-conclusiones">
+                    @for (fab of analisisFabricas; track fab.nombre) {
+                    <p class="conclusion-analisis">
+                        🔎 <strong>{{ fab.nombre }}:</strong> {{ fab.conclusion }}
+                    </p>
+                    }
+                </div>
+            </div>
+
+            <div class="tarjeta-sensibilidad">
+                <h4>✈️ Robustez de Rutas Activas (Rangos de Coeficientes)</h4>
+                <div class="tabla-responsiva">
+                    <table class="tabla-sensibilidad">
+                        <thead>
+                            <tr>
+                                <th>Ruta Óptima</th>
+                                <th>Asignación</th>
+                                <th>Costo Tarifa</th>
+                                <th>Límite Inf.</th>
+                                <th>Límite Sup.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (ruta of analisisRutas; track ruta.origenDestino) {
+                            <tr>
+                                <td><strong>{{ ruta.origenDestino }}</strong></td>
+                                <td>{{ ruta.cantidad }}</td>
+                                <td>{{ ruta.costo }}</td>
+                                <td>{{ ruta.limiteInferior }}</td>
+                                <td class="texto-alerta">{{ ruta.limiteSuperior }}</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bloque-conclusiones">
+                    @for (ruta of analisisRutas; track ruta.origenDestino) {
+                    <p class="conclusion-analisis">
+                        🎯 <strong>Ruta {{ ruta.origenDestino }}:</strong> {{ ruta.conclusion }}
+                    </p>
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+    }
+
     <div class="panel-inferior">
         <button type="button" class="btn-volver" (click)="volver()">← Modificar Parámetros</button>
     </div>

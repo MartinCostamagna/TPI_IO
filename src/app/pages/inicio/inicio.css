@@ -34,9 +34,9 @@ h2 {
 }
 
 .panel-acciones button {
-    background-color: #FFFFFF;
-    color: #4A5568;
-    border: 1px solid #CBD5E0;
+    background-color: #3182CE;
+    color: #FFFFFF;
+    border: none;
     padding: 10px 18px;
     font-size: 14px;
     font-weight: 600;
@@ -47,20 +47,22 @@ h2 {
 }
 
 .panel-acciones button:hover {
-    background-color: #EDF2F7;
-    border-color: #A0AEC0;
+    background-color: #2B6CB0;
+    box-shadow: 0 4px 6px rgba(49, 130, 206, 0.2);
     transform: translateY(-1px);
 }
 
-.panel-acciones button:last-child {
-    background-color: #3182CE;
-    color: #FFFFFF;
-    border: none;
+.panel-acciones .btn-accion-eliminar {
+    background-color: #FFF5F5;
+    color: #C53030;
+    border: 1px solid #FEB2B2;
 }
 
-.panel-acciones button:last-child:hover {
-    background-color: #2B6CB0;
-    box-shadow: 0 4px 6px rgba(49, 130, 206, 0.2);
+.panel-acciones .btn-accion-eliminar:hover {
+    background-color: #FED7D7;
+    border-color: #F56565;
+    color: #9B2C2C;
+    transform: translateY(-1px);
 }
 
 /* --- SECCIÓN CENTRALIZADA DE LA MATRIZ --- */
