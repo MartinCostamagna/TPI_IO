@@ -2,9 +2,9 @@
 
 <div class="panel-acciones">
     <button type="button" (click)="agregarFabrica()">+ Agregar Fábrica</button>
-    <button type="button" class="btn-accion-eliminar" (click)="eliminarFabrica()">- Eliminar Fábrica</button>
+    <button type="button" class="btnEliminar" (click)="eliminarFabrica()">- Eliminar Fábrica</button>
     <button type="button" (click)="agregarTienda()">+ Agregar Tienda</button>
-    <button type="button" class="btn-accion-eliminar" (click)="eliminarTienda()">- Eliminar Tienda</button>
+    <button type="button" class="btnEliminar" (click)="eliminarTienda()">- Eliminar Tienda</button>
 </div>
 
 <div class="divTabla" [formGroup]="matrizForm">
@@ -33,13 +33,13 @@
                 <ng-container formArrayName="costos">
                     @for (costo of getCostosControls(fabrica); track $index; let j = $index) {
                     <td>
-                        <input type="number" [formControlName]="j" placeholder="$">
+                        <input type="number" [formControlName]="j" placeholder="Costo">
                     </td>
                     }
                 </ng-container>
 
                 <td>
-                    <input type="number" formControlName="oferta" class="input-total">
+                    <input type="number" formControlName="oferta" class="input-total" placeholder="Cantidad">
                 </td>
             </tr>
             }
@@ -51,7 +51,7 @@
                 <td><strong>Demanda Mensual</strong></td>
                 @for (demanda of demandasFormArray.controls; track $index; let k = $index) {
                 <td>
-                    <input type="number" [formControlName]="k">
+                    <input type="number" [formControlName]="k" placeholder="Cantidad">
                 </td>
                 }
                 <td class="celda-vacia">-</td>

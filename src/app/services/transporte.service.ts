@@ -28,12 +28,12 @@ export class TransporteService {
       variables: {}
     };
 
-    // 🌟 1. CALCULAR TOTALES PARA EL BALANCEO AUTOMÁTICO
+    // CALCULAR TOTALES PARA EL BALANCEO AUTOMÁTICO
     const ofertaTotal = matriz.fabricas.reduce((sum, f) => sum + f.oferta, 0);
     const demandaTotal = matriz.demandas.reduce((sum, d) => sum + d, 0);
     const diferencia = Math.abs(ofertaTotal - demandaTotal);
 
-    // 🌟 2. GENERAR RESTRICCIONES DE OFERTA (FÁBRICAS REALES)
+    // GENERAR RESTRICCIONES DE OFERTA (FÁBRICAS REALES)
     matriz.fabricas.forEach((fab, i) => {
       model.constraints[`fab_${i}`] = { max: fab.oferta };
     });
@@ -43,7 +43,7 @@ export class TransporteService {
       model.constraints['fab_ficticia'] = { max: diferencia };
     }
 
-    // 🌟 3. GENERAR RESTRICCIONES DE DEMANDA (TIENDAS REALES)
+    // GENERAR RESTRICCIONES DE DEMANDA (TIENDAS REALES)
     matriz.tiendas.forEach((tienda, j) => {
       model.constraints[`tienda_${j}`] = { min: matriz.demandas[j] };
     });
@@ -53,7 +53,7 @@ export class TransporteService {
       model.constraints['tienda_ficticia'] = { min: diferencia };
     }
 
-    // 🌟 4. GENERAR VARIABLES DE DECISIÓN (ARCOS EN LA RED)
+    // GENERAR VARIABLES DE DECISIÓN (ARCOS EN LA RED)
     matriz.fabricas.forEach((fab, i) => {
       matriz.tiendas.forEach((tienda, j) => {
         const varName = `x_${i}_${j}`;

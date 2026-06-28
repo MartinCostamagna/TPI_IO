@@ -48,25 +48,26 @@ export class Inicio implements OnInit {
     this.fabricasFormArray.controls.forEach((fabrica) => {
       const costos = fabrica.get('costos') as FormArray;
       if (costos) {
-        costos.push(this.fb.control(0, Validators.required));
+        costos.push(this.fb.control(null, Validators.required));
       }
     });
-    this.demandasFormArray.push(this.fb.control(0, Validators.required));
+    this.demandasFormArray.push(this.fb.control(null, Validators.required));
     this.matrizForm.updateValueAndValidity();
     this.cdr.detectChanges();
   }
 
   agregarFabrica() {
     const numeroSiguiente = this.fabricasFormArray.length + 1;
-    const costosIniciales = this.tiendasFormArray.controls.map(() => this.fb.control(0, Validators.required));
+    const costosIniciales = this.tiendasFormArray.controls.map(() => this.fb.control(null, Validators.required));
 
     const nuevaFabrica = this.fb.group({
       nombre: [`Fábrica ${numeroSiguiente}`, Validators.required],
       costos: this.fb.array(costosIniciales),
-      oferta: [0, Validators.required]
+      oferta: [null, Validators.required]
     });
 
     this.fabricasFormArray.push(nuevaFabrica);
+    this.matrizForm.updateValueAndValidity();
     this.cdr.detectChanges();
   }
 
@@ -79,16 +80,12 @@ export class Inicio implements OnInit {
   }
 
   irAGenerarGrafo() {
-    // 1. Verificamos que el formulario sea válido (que no haya campos vacíos)
     if (this.matrizForm.invalid) {
-      alert('Por favor, completa todos los campos de costos, ofertas y demandas antes de continuar.');
+      window.alert('Por favor, completa todos los campos de costos, ofertas y demandas antes de continuar.');
       return;
     }
 
-    // 2. Enviamos el JSON con los datos al servicio compartido
     this.transporteService.guardarMatriz(this.matrizForm.value);
-
-    // 3. Ahora sí, viajamos a la página del grafo
     this.router.navigate(['/grafo']);
   }
 

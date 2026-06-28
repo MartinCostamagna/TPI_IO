@@ -52,24 +52,23 @@ h2 {
     transform: translateY(-1px);
 }
 
-.panel-acciones .btn-accion-eliminar {
+.panel-acciones .btnEliminar {
     background-color: #FFF5F5;
     color: #C53030;
     border: 1px solid #FEB2B2;
 }
 
-.panel-acciones .btn-accion-eliminar:hover {
+.panel-acciones .btnEliminar:hover {
     background-color: #FED7D7;
     border-color: #F56565;
     color: #9B2C2C;
     transform: translateY(-1px);
 }
 
-/* --- SECCIÓN CENTRALIZADA DE LA MATRIZ --- */
+/* --- SECCIÓN DE LA TABLA --- */
 .seccion-matriz {
     display: flex;
     justify-content: center;
-    /* 👈 Centra horizontalmente la tabla completa */
     width: 100%;
     margin: 15px 0 30px 0;
 }
@@ -89,7 +88,6 @@ table {
     border-spacing: 0;
 }
 
-/* --- CELDAS Y BORDES NATIVOS --- */
 th,
 td {
     border: none;
@@ -192,7 +190,6 @@ input[type=number] {
     -moz-appearance: textfield;
 }
 
-/* --- PIE DE TABLA (TFOOT) --- */
 tfoot td {
     background-color: #F0FFF4;
     color: #22543D;
@@ -219,11 +216,9 @@ tfoot td input[type="number"] {
     border-bottom-right-radius: 6px;
 }
 
-/* --- 🌟 PANEL DE BOTONES INFERIOR --- */
 .panel-inferior {
     display: flex;
     justify-content: center;
-    /* Centra los botones de control abajo */
     gap: 20px;
     margin-top: 10px;
     width: 100%;
