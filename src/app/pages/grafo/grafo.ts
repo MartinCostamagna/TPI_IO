@@ -18,6 +18,7 @@ export class Grafo implements OnInit, AfterViewInit {
   costoTotal: number = 0;
   esFactible: boolean = false;
   analisisFabricas: any[] = [];
+  analisisTiendas: any[] = [];
   analisisRutas: any[] = [];
 
   constructor(private transporteService: TransporteService, private router: Router) { }
@@ -29,7 +30,9 @@ export class Grafo implements OnInit, AfterViewInit {
         this.resultadosLp = this.transporteService.optimizarModelo(datos);
         this.costoTotal = this.resultadosLp.result || 0;
         this.esFactible = this.resultadosLp.feasible || false;
-        this.generarAnalisisSensibilidad();
+        if (this.esFactible) {
+          this.calcularSensibilidad();
+        }
       } else {
         this.router.navigate(['/']);
       }
@@ -164,106 +167,165 @@ export class Grafo implements OnInit, AfterViewInit {
     new Network(this.networkContainer.nativeElement, data, options);
   }
 
-  generarAnalisisSensibilidad() {
+  calcularSensibilidad() {
     if (!this.matriz || !this.resultadosLp) return;
+
+    this.analisisFabricas = [];
+    this.analisisTiendas = [];
+
+    const numFab = this.matriz.fabricas.length;
+    const numTiendas = this.matriz.tiendas.length;
+
+    // Usamos arreglos con null para saber cuáles nodos ya calculamos y cuáles faltan
+    const u: (number | null)[] = new Array(numFab).fill(null);
+    const v: (number | null)[] = new Array(numTiendas).fill(null);
+
+    let completado = false;
+
+    while (!completado) {
+      let cambios = false;
+
+      const indexU = u.findIndex(val => val === null);
+      if (indexU !== -1) {
+        u[indexU] = 0;
+        cambios = true;
+      } else {
+        const indexV = v.findIndex(val => val === null);
+        if (indexV !== -1) {
+          v[indexV] = 0;
+          cambios = true;
+        }
+      }
+
+      let propagando = true;
+      while (propagando) {
+        propagando = false;
+        this.matriz.fabricas.forEach((fab, i) => {
+          this.matriz!.tiendas.forEach((tienda, j) => {
+            const cantidadEnviada = this.resultadosLp[`x_${i}_${j}`] || 0;
+
+            if (cantidadEnviada > 0) {
+              const costoUnitario = fab.costos[j];
+
+              if (u[i] !== null && v[j] === null) {
+                v[j] = costoUnitario - u[i]!;
+                propagando = true;
+                cambios = true;
+              } else if (v[j] !== null && u[i] === null) {
+                u[i] = costoUnitario - v[j]!;
+                propagando = true;
+                cambios = true;
+              }
+            }
+          });
+        });
+      }
+
+      completado = u.every(x => x !== null) && v.every(x => x !== null);
+    }
+
+    this.matriz.fabricas.forEach((fab, i) => {
+      let precioSombraFinal = -u[i]!;
+
+      if (Object.is(precioSombraFinal, -0)) precioSombraFinal = 0;
+
+      this.analisisFabricas.push({
+        nombre: fab.nombre,
+        ofertaActual: fab.oferta,
+        precioSombra: precioSombraFinal,
+        interpretacion: precioSombraFinal === 0
+          ? 'Capacidad balanceada sin impacto marginal.'
+          : `El costo global del sistema cambiará en $${precioSombraFinal} por cada unidad extra.`
+      });
+    });
 
     const ofertaTotal = this.matriz.fabricas.reduce((sum, f) => sum + f.oferta, 0);
     const demandaTotal = this.matriz.demandas.reduce((sum, d) => sum + d, 0);
-    const hayDeficit = demandaTotal > ofertaTotal;
 
-    // 1. PROCESAR RECURSOS (PRECIOS SOMBRA EXACTOS EN BASE A LINDO)
-    this.analisisFabricas = this.matriz.fabricas.map((fab, i) => {
-      // Según LINDO, las fábricas reales tienen precio sombra 0 en este escenario base
-      return {
-        nombre: fab.nombre,
-        capacidad: `${fab.oferta} u`,
-        precioSombra: `$0 / u`,
-        estilo: 'texto-ok',
-        conclusion: `La planta opera dentro de la solución base estable. Modificar su capacidad de manera aislada en este momento no alterará el costo óptimo de $3.800, dado que el sistema se encuentra limitado globalmente por la escasez general de oferta.`
-      };
-    });
+    if (demandaTotal > ofertaTotal) {
+      let precioSombraFicticia = 0;
 
-    // Si el sistema balanceó automáticamente inyectando el déficit, agregamos su precio sombra real
-    if (hayDeficit) {
-      const deficit = demandaTotal - ofertaTotal;
+      this.matriz.tiendas.forEach((tienda, j) => {
+        if ((this.resultadosLp[`x_ficticia_${j}`] || 0) > 0) {
+          precioSombraFicticia = v[j]!;
+        }
+      });
 
-      // En LINDO, las demandas insatisfechas de las tiendas (Filas 5, 6, 7) tienen costos marginales de -2, -2 y -1.
-      // El precio sombra del déficit global (Fila 4) es -2 (o 2 en valor absoluto).
+      if (Object.is(precioSombraFicticia, -0)) precioSombraFicticia = 0;
+
       this.analisisFabricas.push({
         nombre: 'Fábrica Ficticia (Déficit)',
-        capacidad: `${deficit} u`,
-        precioSombra: `-$2 / u`, // El Dual Price real de la restricción de balanceo
-        estilo: 'texto-alerta',
-        conclusion: `Representa el costo de oportunidad del desabastecimiento. Cada unidad extra de demanda que se agregue al mercado incrementará la penalización en $2. Por el contrario, si se consiguiera stock real, se ahorrarían $2 por cada unidad absorbida.`
+        ofertaActual: demandaTotal - ofertaTotal,
+        precioSombra: Math.abs(precioSombraFicticia),
+        interpretacion: `El costo global bajará en $${Math.abs(precioSombraFicticia)} por cada unidad extra de déficit permitido (ahorro de flete real).`
       });
     }
 
-    // 2. PROCESAR RUTAS ACTIVAS (RANGOS EXACTOS DE LINDO)
-    this.analisisRutas = [];
+    this.matriz.tiendas.forEach((tienda, j) => {
+      let precioSombraFinal = -v[j]!;
 
-    // --- PARTE A: Rutas Reales ---
-    this.matriz.fabricas.forEach((fab, i) => {
-      this.matriz!.tiendas.forEach((tienda, j) => {
-        const varName = `x_${i}_${j}`;
-        const cantidadEnviada = this.resultadosLp[varName] || 0;
-        const costoUnitario = fab.costos[j];
+      if (Object.is(precioSombraFinal, -0)) precioSombraFinal = 0;
 
-        if (cantidadEnviada > 0) {
-          let limiteSuperior = '$3 / u';
-          let limiteInferior = '-$∞';
-          let interpretacion = '';
-
-          // Caso específico Fábrica 1 -> Tienda C (X1C en LINDO)
-          if (fab.nombre.includes('1') && tienda.includes('C')) {
-            limiteSuperior = `$${costoUnitario + 1} / u`; // ALLOWABLE INCREASE = 1
-            limiteInferior = `$${costoUnitario - 1} / u`; // ALLOWABLE DECREASE = 1
-            interpretacion = `Esta ruta transporta ${cantidadEnviada} unidades. Es moderadamente robusta: tolera un incremento máximo de flete de $1 (hasta llegar a $2) antes de dejar de ser una decisión eficiente.`;
-          }
-          // Caso específico Fábrica 2 -> Tienda A (X2A en LINDO)
-          else if (fab.nombre.includes('2') && tienda.includes('A')) {
-            limiteSuperior = `$${costoUnitario + 1} / u`; // ALLOWABLE INCREASE = 1
-            limiteInferior = `$${costoUnitario} / u`;     // ALLOWABLE DECREASE = 0
-            interpretacion = `Ruta crítica en equilibrio óptimo. Su margen de reducción de costo es cero; cualquier baja en la tarifa la potenciaría, mientras que tolera subas de hasta $1.`;
-          }
-          // Caso específico Fábrica 2 -> Tienda B (X2B en LINDO)
-          else if (fab.nombre.includes('2') && tienda.includes('B')) {
-            limiteSuperior = `$${costoUnitario} / u`;     // ALLOWABLE INCREASE = 0
-            limiteInferior = `$${costoUnitario - 2} / u`; // ALLOWABLE DECREASE = 2
-            interpretacion = `Ruta en condición extrema de competitividad. No admite ningún aumento en su costo de tarifa ($0 de aumento permitido); si sube un solo centavo, el sistema la descartará de inmediato.`;
-          } else {
-            // Fallback genérico proporcional por si meten otros datos aleatorios
-            limiteSuperior = `$${costoUnitario * 1.5} / u`;
-            interpretacion = `Ruta logística activa transportando ${cantidadEnviada} unidades de microprocesadores de forma eficiente.`;
-          }
-
-          this.analisisRutas.push({
-            origenDestino: `${fab.nombre} → ${tienda}`,
-            cantidad: `${cantidadEnviada} u`,
-            costo: `$${costoUnitario} / u`,
-            limiteInferior: limiteInferior,
-            limiteSuperior: limiteSuperior,
-            conclusion: interpretacion
-          });
-        }
+      this.analisisTiendas.push({
+        nombre: tienda,
+        demandaActual: this.matriz!.demandas[j],
+        precioSombra: precioSombraFinal,
+        interpretacion: `Cada unidad extra requerida aquí cambiará el costo global en $${Math.abs(precioSombraFinal)}.`
       });
     });
 
-    // --- PARTE B: Ruta de la Fábrica Ficticia (Si hay déficit) ---
-    if (hayDeficit) {
-      this.matriz.tiendas.forEach((tienda, j) => {
-        const varNameFicticia = `x_ficticia_${j}`;
-        const deficitAsignado = this.resultadosLp[varNameFicticia] || 0;
+    this.analisisRutas = [];
 
-        if (deficitAsignado > 0) {
-          this.analisisRutas.push({
-            origenDestino: `Fábrica Ficticia → ${tienda}`,
-            cantidad: `${deficitAsignado} u`,
-            costo: `$0 / u`,
-            limiteInferior: '-$∞',
-            limiteSuperior: `$0 / u`,
-            conclusion: `Mapea el desabastecimiento asignado por costo de oportunidad directo a la ${tienda}. Indica que comercialmente esta tienda es la que absorbe las 200 unidades faltantes de la red.`
-          });
+    this.matriz.fabricas.forEach((fab, i) => {
+      this.matriz!.tiendas.forEach((tienda, j) => {
+        const cantidadEnviada = this.resultadosLp[`x_${i}_${j}`] || 0;
+        const costoUnitario = fab.costos[j];
+
+        const costoReducido = costoUnitario - u[i]! - v[j]!;
+
+        let allowableIncrease: string | number;
+        let allowableDecrease: string | number;
+
+        if (cantidadEnviada === 0) {
+          allowableIncrease = '∞ (Infinito)';
+          allowableDecrease = Math.abs(costoReducido);
+        } else {
+          allowableIncrease = 'Varía s/ Base';
+          allowableDecrease = 'Varía s/ Base';
         }
+
+        this.analisisRutas.push({
+          ruta: `${fab.nombre} → ${tienda}`,
+          flujo: cantidadEnviada,
+          costoOriginal: costoUnitario,
+          costoReducido: Math.abs(costoReducido),
+          allowableIncrease: allowableIncrease,
+          allowableDecrease: allowableDecrease
+        });
+      });
+    });
+
+    // AGREGAMOS LAS RUTAS DE LA FÁBRICA FICTICIA (Si hay déficit)
+    if (demandaTotal > ofertaTotal) {
+      let u_ficticia = 0;
+      this.matriz.tiendas.forEach((tienda, j) => {
+        if ((this.resultadosLp[`x_ficticia_${j}`] || 0) > 0) {
+          u_ficticia = -v[j]!;
+        }
+      });
+
+      this.matriz.tiendas.forEach((tienda, j) => {
+        const cantidadEnviada = this.resultadosLp[`x_ficticia_${j}`] || 0;
+        const costoReducido = 0 - u_ficticia - v[j]!;
+
+        this.analisisRutas.push({
+          ruta: `Fábrica Ficticia → ${tienda}`,
+          flujo: cantidadEnviada,
+          costoOriginal: 0,
+          costoReducido: Math.abs(costoReducido),
+          allowableIncrease: cantidadEnviada === 0 ? '∞ (Infinito)' : 'Varía s/ Base',
+          allowableDecrease: cantidadEnviada === 0 ? Math.abs(costoReducido) : 'Varía s/ Base'
+        });
       });
     }
   }

@@ -18,82 +18,109 @@
         <div #networkContainer class="lienzo-grafo"></div>
     </div>
 
-    @if (analisisFabricas.length > 0) {
+    @if (esFactible) {
     <div class="contenedor-sensibilidad">
-        <h3>📊 Análisis de Sensibilidad Logística</h3>
-        <p class="subtitulo-seccion">Interpretación de límites operativos y costos marginales calculados para este
-            escenario.</p>
+        <h3>Análisis de Sensibilidad (Precios Sombra)</h3>
+        <p class="subtitulo-seccion">Impacto económico marginal ante cambios unitarios en las capacidades o demandas del
+            sistema.</p>
 
         <div class="grilla-sensibilidad">
-
             <div class="tarjeta-sensibilidad">
-                <h4>💡 Costos Marginales de Capacidad (Precios Sombra)</h4>
-                <div class="tabla-responsiva">
-                    <table class="tabla-sensibilidad">
-                        <thead>
-                            <tr>
-                                <th>Recurso (Origen)</th>
-                                <th>Capacidad Actual</th>
-                                <th>Precio Sombra</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (fab of analisisFabricas; track fab.nombre) {
-                            <tr>
-                                <td><strong>{{ fab.nombre }}</strong></td>
-                                <td>{{ fab.capacidad }}</td>
-                                <td class="{{ fab.estilo }}">{{ fab.precioSombra }}</td>
-                            </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                <h4>Análisis de Disponibilidad (Oferta)</h4>
+                <table class="tabla-sensibilidad">
+                    <thead>
+                        <tr>
+                            <th>Origen</th>
+                            <th>Capacidad Actual</th>
+                            <th>Precio Sombra</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (fab of analisisFabricas; track fab.nombre) {
+                        <tr>
+                            <td><strong>{{ fab.nombre }}</strong></td>
+                            <td>{{ fab.ofertaActual }} u.</td>
+                            <td [class.texto-alerta]="fab.precioSombra !== 0" [class.texto-ok]="fab.precioSombra === 0">
+                                $ {{ fab.precioSombra | number:'1.0-2' }}
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
 
                 <div class="bloque-conclusiones">
                     @for (fab of analisisFabricas; track fab.nombre) {
                     <p class="conclusion-analisis">
-                        🔎 <strong>{{ fab.nombre }}:</strong> {{ fab.conclusion }}
+                        <strong>{{ fab.nombre }}:</strong> {{ fab.interpretacion }}
                     </p>
                     }
                 </div>
             </div>
 
             <div class="tarjeta-sensibilidad">
-                <h4>✈️ Robustez de Rutas Activas (Rangos de Coeficientes)</h4>
-                <div class="tabla-responsiva">
-                    <table class="tabla-sensibilidad">
-                        <thead>
-                            <tr>
-                                <th>Ruta Óptima</th>
-                                <th>Asignación</th>
-                                <th>Costo Tarifa</th>
-                                <th>Límite Inf.</th>
-                                <th>Límite Sup.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (ruta of analisisRutas; track ruta.origenDestino) {
-                            <tr>
-                                <td><strong>{{ ruta.origenDestino }}</strong></td>
-                                <td>{{ ruta.cantidad }}</td>
-                                <td>{{ ruta.costo }}</td>
-                                <td>{{ ruta.limiteInferior }}</td>
-                                <td class="texto-alerta">{{ ruta.limiteSuperior }}</td>
-                            </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                <h4>Análisis de Requerimientos (Demanda)</h4>
+                <table class="tabla-sensibilidad">
+                    <thead>
+                        <tr>
+                            <th>Destino</th>
+                            <th>Demanda Actual</th>
+                            <th>Precio Sombra</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (tienda of analisisTiendas; track tienda.nombre) {
+                        <tr>
+                            <td><strong>{{ tienda.nombre }}</strong></td>
+                            <td>{{ tienda.demandaActual }} u.</td>
+                            <td class="texto-ok">$ {{ tienda.precioSombra | number:'1.0-2' }}</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
 
                 <div class="bloque-conclusiones">
-                    @for (ruta of analisisRutas; track ruta.origenDestino) {
-                    <p class="conclusion-analisis">
-                        🎯 <strong>Ruta {{ ruta.origenDestino }}:</strong> {{ ruta.conclusion }}
+                    @for (tienda of analisisTiendas; track tienda.nombre) {
+                    <p class="conclusion-analisis" style="border-left-color: #38A169; background-color: #F0FFF4;">
+                        <strong>{{ tienda.nombre }}:</strong> {{ tienda.interpretacion }}
                     </p>
                     }
                 </div>
             </div>
-
+        </div>
+        <div class="tarjeta-sensibilidad" style="margin-top: 24px;">
+            <h4>Análisis de Coeficientes y Rangos (Variables de Decisión)</h4>
+            <table class="tabla-sensibilidad">
+                <thead>
+                    <tr>
+                        <th>Ruta (Variable)</th>
+                        <th>Flujo Óptimo</th>
+                        <th>Costo Unit.</th>
+                        <th>Costo Reducido</th>
+                        <th>Aumento Permitido</th>
+                        <th>Disminución Permitida</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (ruta of analisisRutas; track ruta.ruta) {
+                    <tr>
+                        <td><strong>{{ ruta.ruta }}</strong></td>
+                        <td>{{ ruta.flujo }} u.</td>
+                        <td>$ {{ ruta.costoOriginal }}</td>
+                        <td [class.texto-alerta]="ruta.costoReducido > 0" [class.texto-ok]="ruta.costoReducido === 0">
+                            $ {{ ruta.costoReducido }}
+                        </td>
+                        <td>{{ ruta.allowableIncrease }}</td>
+                        <td>
+                            @if (ruta.allowableDecrease === 'Varía s/ Base') {
+                            {{ ruta.allowableDecrease }}
+                            } @else {
+                            $ {{ ruta.allowableDecrease }}
+                            }
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
     }
