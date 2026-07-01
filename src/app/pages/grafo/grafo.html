@@ -127,5 +127,12 @@
 
     <div class="panel-inferior">
         <button type="button" class="btn-volver" (click)="volver()">← Modificar Parámetros</button>
+
+        @if (hayDesbalance && !estaBalanceado) {
+        <button type="button" class="btn-balancear" (click)="aplicarBalanceo()"
+            style="margin-left: 15px; background-color: #DD6B20; color: white; border: none; padding: 12px 24px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px rgba(221,107,32,0.3); font-size: 15px; transition: all 0.2s ease;">
+            Balancear Sistema
+        </button>
+        }
     </div>
 </div>

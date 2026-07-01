@@ -17,9 +17,14 @@ export class Grafo implements OnInit, AfterViewInit {
   resultadosLp: any = null;
   costoTotal: number = 0;
   esFactible: boolean = false;
+
   analisisFabricas: any[] = [];
   analisisTiendas: any[] = [];
   analisisRutas: any[] = [];
+
+  // Variables de control de estado para el balanceo
+  hayDesbalance: boolean = false;
+  estaBalanceado: boolean = false;
 
   constructor(private transporteService: TransporteService, private router: Router) { }
 
@@ -27,9 +32,17 @@ export class Grafo implements OnInit, AfterViewInit {
     this.transporteService.matrizActual$.subscribe(datos => {
       if (datos) {
         this.matriz = datos;
-        this.resultadosLp = this.transporteService.optimizarModelo(datos);
+
+        // Verificamos si hay déficit estructural al cargar
+        const ofertaTotal = this.matriz.fabricas.reduce((sum, f) => sum + f.oferta, 0);
+        const demandaTotal = this.matriz.demandas.reduce((sum, d) => sum + d, 0);
+        this.hayDesbalance = demandaTotal > ofertaTotal;
+
+        // 1. Iniciamos calculando el modelo sin manipular
+        this.resultadosLp = this.transporteService.optimizarModeloCrudo(datos);
         this.costoTotal = this.resultadosLp.result || 0;
         this.esFactible = this.resultadosLp.feasible || false;
+
         if (this.esFactible) {
           this.calcularSensibilidad();
         }
@@ -45,126 +58,21 @@ export class Grafo implements OnInit, AfterViewInit {
     }
   }
 
-  dibujarGrafo() {
+  // MÉTODO NUEVO: Se ejecuta al presionar el botón
+  aplicarBalanceo() {
     if (!this.matriz) return;
 
-    const nodesArray: any[] = [];
-    const edgesArray: any[] = [];
+    this.estaBalanceado = true; // Actualizamos el estado
+    this.resultadosLp = this.transporteService.optimizarModeloBalanceado(this.matriz);
+    this.costoTotal = this.resultadosLp.result || 0;
+    this.esFactible = this.resultadosLp.feasible || false;
 
-    // CREAMOS LOS NODOS
-    this.matriz.fabricas.forEach((fab, i) => {
-      nodesArray.push({
-        id: `fab_${i}`,
-        label: `${fab.nombre}\n(Ofer: ${fab.oferta})`,
-        color: { background: '#EBF8FF', border: '#3182CE' },
-        shape: 'ellipse',
-        x: -200,
-        y: i * 140
-      });
-    });
-
-    //AGREGAR FÁBRICA FICTICIA SI EL MODELO TIENE DÉFICIT
-    const ofertaTotal = this.matriz.fabricas.reduce((sum, f) => sum + f.oferta, 0);
-    const demandaTotal = this.matriz.demandas.reduce((sum, d) => sum + d, 0);
-
-    if (demandaTotal > ofertaTotal) {
-      const deficit = demandaTotal - ofertaTotal;
-      nodesArray.push({
-        id: 'fab_ficticia',
-        label: `Fábrica Ficticia\n(Déficit: ${deficit})`,
-        color: { background: '#EDF2F7', border: '#718096' },
-        shape: 'ellipse',
-        x: -200,
-        y: this.matriz.fabricas.length * 140
-      });
+    if (this.esFactible) {
+      this.calcularSensibilidad();
     }
 
-    // Crear Nodos de Tiendas
-    this.matriz.tiendas.forEach((tienda, j) => {
-      nodesArray.push({
-        id: `tienda_${j}`,
-        label: `${tienda}\n(Dem: ${this.matriz!.demandas[j]})`,
-        color: { background: '#F0FFF4', border: '#38A169' },
-        shape: 'ellipse',
-        x: 200,
-        y: j * 140
-      });
-    });
-
-    // CREAMOS LAS FLECHAS
-
-    // Arcos desde fábricas REALES hacia tiendas
-    this.matriz.fabricas.forEach((fab, i) => {
-      this.matriz!.tiendas.forEach((tienda, j) => {
-        const varName = `x_${i}_${j}`;
-        const cantidadEnviada = this.resultadosLp[varName] || 0;
-        const costoUnitario = fab.costos[j];
-
-        // CONDICIÓN: Si la ruta real lleva flujo óptimo, la agregamos con tooltip interactivo
-        if (cantidadEnviada > 0) {
-          edgesArray.push({
-            from: `fab_${i}`,
-            to: `tienda_${j}`,
-            title: `Decisión Óptima:\n• Cantidad a enviar: ${cantidadEnviada} unidades\n• Costo Unitario: $${costoUnitario}/u`,
-            arrows: 'to',
-            color: { color: '#48BB78', highlight: '#3182CE', hover: '#2F855A' },
-            width: 4
-          });
-        }
-      });
-    });
-
-    // Arcos desde la Fábrica FICTICIA hacia las tiendas (Si hay déficit)
-    if (demandaTotal > ofertaTotal) {
-      this.matriz.tiendas.forEach((tienda, j) => {
-        const varNameFicticia = `x_ficticia_${j}`;
-        const deficitAsignado = this.resultadosLp[varNameFicticia] || 0;
-
-        // Si el solver determina que esta tienda sufre el faltante, dibujamos la flecha gris
-        if (deficitAsignado > 0) {
-          edgesArray.push({
-            from: 'fab_ficticia',
-            to: `tienda_${j}`,
-            title: `Déficit Estructural Asignado:\n• Cantidad no satisfecha: ${deficitAsignado} unidades\n• Costo de Oportunidad: $0/u`,
-            arrows: 'to',
-            color: {
-              color: '#A0AEC0',
-              highlight: '#3182CE',
-              hover: '#4A5568'
-            },
-            width: 3,
-            dashes: true
-          });
-        }
-      });
-    }
-
-    // CONFIGURACIÓN E INICIALIZACIÓN DE VIS.JS
-    const data = {
-      nodes: new DataSet(nodesArray),
-      edges: new DataSet(edgesArray)
-    };
-
-    const options = {
-      physics: false,
-      nodes: {
-        font: { size: 14, face: 'Segoe UI', fontWeight: 'bold' },
-        borderWidth: 2
-      },
-      edges: {
-        smooth: {
-          enabled: true,
-          type: 'cubicBezier',
-          roundness: 0.4
-        }
-      },
-      interaction: {
-        hover: true,
-        tooltipDelay: 100
-      }
-    };
-
-    new Network(this.networkContainer.nativeElement, data, options);
+    // Redibujamos el grafo con las nuevas rutas y nodos ficticios
+    this.dibujarGrafo();
   }
 
   calcularSensibilidad() {
@@ -176,7 +84,6 @@ export class Grafo implements OnInit, AfterViewInit {
     const numFab = this.matriz.fabricas.length;
     const numTiendas = this.matriz.tiendas.length;
 
-    // Usamos arreglos con null para saber cuáles nodos ya calculamos y cuáles faltan
     const u: (number | null)[] = new Array(numFab).fill(null);
     const v: (number | null)[] = new Array(numTiendas).fill(null);
 
@@ -220,13 +127,11 @@ export class Grafo implements OnInit, AfterViewInit {
           });
         });
       }
-
       completado = u.every(x => x !== null) && v.every(x => x !== null);
     }
 
     this.matriz.fabricas.forEach((fab, i) => {
       let precioSombraFinal = -u[i]!;
-
       if (Object.is(precioSombraFinal, -0)) precioSombraFinal = 0;
 
       this.analisisFabricas.push({
@@ -242,7 +147,8 @@ export class Grafo implements OnInit, AfterViewInit {
     const ofertaTotal = this.matriz.fabricas.reduce((sum, f) => sum + f.oferta, 0);
     const demandaTotal = this.matriz.demandas.reduce((sum, d) => sum + d, 0);
 
-    if (demandaTotal > ofertaTotal) {
+    // SOLO calcula la Ficticia si el modelo fue balanceado
+    if (this.estaBalanceado && demandaTotal > ofertaTotal) {
       let precioSombraFicticia = 0;
 
       this.matriz.tiendas.forEach((tienda, j) => {
@@ -263,7 +169,6 @@ export class Grafo implements OnInit, AfterViewInit {
 
     this.matriz.tiendas.forEach((tienda, j) => {
       let precioSombraFinal = -v[j]!;
-
       if (Object.is(precioSombraFinal, -0)) precioSombraFinal = 0;
 
       this.analisisTiendas.push({
@@ -282,7 +187,6 @@ export class Grafo implements OnInit, AfterViewInit {
         const costoUnitario = fab.costos[j];
 
         const costoReducido = costoUnitario - u[i]! - v[j]!;
-
         let allowableIncrease: string | number;
         let allowableDecrease: string | number;
 
@@ -305,8 +209,8 @@ export class Grafo implements OnInit, AfterViewInit {
       });
     });
 
-    // AGREGAMOS LAS RUTAS DE LA FÁBRICA FICTICIA (Si hay déficit)
-    if (demandaTotal > ofertaTotal) {
+    // SOLO dibuja las rutas ficticias si el modelo fue balanceado
+    if (this.estaBalanceado && demandaTotal > ofertaTotal) {
       let u_ficticia = 0;
       this.matriz.tiendas.forEach((tienda, j) => {
         if ((this.resultadosLp[`x_ficticia_${j}`] || 0) > 0) {
@@ -328,6 +232,112 @@ export class Grafo implements OnInit, AfterViewInit {
         });
       });
     }
+  }
+
+  dibujarGrafo() {
+    if (!this.matriz) return;
+
+    const nodesArray: any[] = [];
+    const edgesArray: any[] = [];
+
+    this.matriz.fabricas.forEach((fab, i) => {
+      // Si no es factible o no está calculada la sensibilidad, no mostramos el precio sombra
+      const pSombra = this.analisisFabricas.find(f => f.nombre === fab.nombre)?.precioSombra ?? '-';
+      nodesArray.push({
+        id: `fab_${i}`,
+        label: `${fab.nombre}\n(Ofer: ${fab.oferta})`,
+        title: `Análisis de Capacidad:\n• Precio Sombra: $${pSombra}`,
+        color: { background: '#EBF8FF', border: '#3182CE' },
+        shape: 'ellipse',
+        x: -200,
+        y: i * 140
+      });
+    });
+
+    const ofertaTotal = this.matriz.fabricas.reduce((sum, f) => sum + f.oferta, 0);
+    const demandaTotal = this.matriz.demandas.reduce((sum, d) => sum + d, 0);
+
+    // SOLO dibuja el nodo ficticio si el modelo fue balanceado
+    if (this.estaBalanceado && demandaTotal > ofertaTotal) {
+      const deficit = demandaTotal - ofertaTotal;
+      nodesArray.push({
+        id: 'fab_ficticia',
+        label: `Fábrica Ficticia\n(Déficit: ${deficit})`,
+        color: { background: '#EDF2F7', border: '#718096' },
+        shape: 'ellipse',
+        x: -200,
+        y: this.matriz.fabricas.length * 140
+      });
+    }
+
+    this.matriz.tiendas.forEach((tienda, j) => {
+      const pSombra = this.analisisTiendas.find(t => t.nombre === tienda)?.precioSombra ?? '-';
+      nodesArray.push({
+        id: `tienda_${j}`,
+        label: `${tienda}\n(Dem: ${this.matriz!.demandas[j]})`,
+        title: `Análisis de Mercado:\n• Valor Marginal (Precio Sombra): $${pSombra}`,
+        color: { background: '#F0FFF4', border: '#38A169' },
+        shape: 'ellipse',
+        x: 200,
+        y: j * 140
+      });
+    });
+
+    // Dibujamos arcos si hay un resultado factible y se ejecutó la red
+    if (this.esFactible) {
+      this.matriz.fabricas.forEach((fab, i) => {
+        this.matriz!.tiendas.forEach((tienda, j) => {
+          const varName = `x_${i}_${j}`;
+          const cantidadEnviada = this.resultadosLp[varName] || 0;
+          const costoUnitario = fab.costos[j];
+
+          if (cantidadEnviada > 0) {
+            edgesArray.push({
+              from: `fab_${i}`,
+              to: `tienda_${j}`,
+              title: `Decisión Óptima:\n• Cantidad a enviar: ${cantidadEnviada} unidades\n• Costo Unitario: $${costoUnitario}/u`,
+              arrows: 'to',
+              color: { color: '#48BB78', highlight: '#3182CE', hover: '#2F855A' },
+              width: 4
+            });
+          }
+        });
+      });
+
+      // SOLO dibuja los arcos ficticios si el modelo fue balanceado
+      if (this.estaBalanceado && demandaTotal > ofertaTotal) {
+        this.matriz.tiendas.forEach((tienda, j) => {
+          const varNameFicticia = `x_ficticia_${j}`;
+          const deficitAsignado = this.resultadosLp[varNameFicticia] || 0;
+
+          if (deficitAsignado > 0) {
+            edgesArray.push({
+              from: 'fab_ficticia',
+              to: `tienda_${j}`,
+              title: `Déficit Estructural Asignado:\n• Cantidad no satisfecha: ${deficitAsignado} unidades`,
+              arrows: 'to',
+              color: { color: '#A0AEC0', highlight: '#3182CE', hover: '#4A5568' },
+              width: 3,
+              dashes: true
+            });
+          }
+        });
+      }
+    }
+
+    const data = {
+      nodes: new DataSet(nodesArray),
+      edges: new DataSet(edgesArray)
+    };
+
+    const options = {
+      physics: false,
+      nodes: { font: { size: 14, face: 'Segoe UI' }, borderWidth: 2 },
+      edges: { smooth: { enabled: true, type: 'cubicBezier', roundness: 0.4 } },
+      interaction: { hover: true, tooltipDelay: 100 }
+    };
+
+    new Network(this.networkContainer.nativeElement, data, options);
   }
 
   volver() {
